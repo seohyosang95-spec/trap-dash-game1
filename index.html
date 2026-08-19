@@ -179,19 +179,21 @@ HTML
     muteToggle.addEventListener('change', (e) => { isMuted = e.target.checked; });
     charSelect.addEventListener('change', (e) => { applyCharacterStats(e.target.value); });
 
-    // 캐릭터 속성 테이블
+    // 캐릭터 디자인 및 능력치 정의
     const CHARACTERS = {
-      runner: { name: '런너', color: '#facc15', speed: 3.8, jumpPower: -8.2 },
-      dash:   { name: '대시', color: '#38bdf8', speed: 4.6, jumpPower: -7.8 },
-      hopper: { name: '호퍼', color: '#4ade80', speed: 3.4, jumpPower: -9.0 }
+      runner: { name: '런너', color: '#facc15', eyeColor: '#000', speed: 3.8, jumpPower: -8.2, type: 'runner' },
+      dash:   { name: '대시', color: '#38bdf8', eyeColor: '#fff', speed: 4.6, jumpPower: -7.8, type: 'dash' },
+      hopper: { name: '호퍼', color: '#4ade80', eyeColor: '#1e293b', speed: 3.4, jumpPower: -9.0, type: 'hopper' }
     };
 
     const player = {
-      x: 30, y: 190, width: 18, height: 18,
+      x: 30, y: 190, width: 20, height: 24,
       vx: 0, vy: 0, speed: 3.8,
       gravity: 0.48, jumpPower: -8.2,
       jumpCount: 0, maxJumps: 2,
-      grounded: false, color: '#facc15'
+      grounded: false, color: '#facc15',
+      eyeColor: '#000', facing: 'right', animFrame: 0,
+      type: 'runner'
     };
 
     function applyCharacterStats(type) {
@@ -199,6 +201,8 @@ HTML
       player.speed = stats.speed;
       player.jumpPower = stats.jumpPower;
       player.color = stats.color;
+      player.eyeColor = stats.eyeColor;
+      player.type = stats.type;
     }
 
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -245,7 +249,7 @@ HTML
     const mapWidth = 4000;
     let cameraX = 0;
     let gameTime = 0;
-    let gameState = 'START'; // START, PLAYING, PAUSED, GAMEOVER, CLEAR
+    let gameState = 'START';
     let lastTime = performance.now();
 
     const finishLine = { x: 3900, y: 130, width: 35, height: 110 };
@@ -338,7 +342,7 @@ HTML
             player.vy = player.jumpPower;
             player.jumpCount++;
             playSound('jump');
-            createParticles(player.x + 9, player.y + 18, player.color, 5);
+            createParticles(player.x + 10, player.y + 24, player.color, 5);
           } else if (gameState !== 'PLAYING') {
             startGame();
           }
@@ -354,7 +358,7 @@ HTML
 
     function startGame() {
       applyCharacterStats(charSelect.value);
-      player.x = 30; player.y = 190;
+      player.x = 30; player.y = 180;
       player.vx = 0; player.vy = 0;
       player.jumpCount = 0;
       cameraX = 0;
@@ -423,9 +427,18 @@ HTML
       const effectiveDt = Math.min(dt, 0.1);
       gameTime += effectiveDt;
 
-      if (keys.ArrowLeft) player.vx = -player.speed;
-      else if (keys.ArrowRight) player.vx = player.speed;
-      else player.vx = 0;
+      if (keys.ArrowLeft) {
+        player.vx = -player.speed;
+        player.facing = 'left';
+        player.animFrame += 0.2;
+      } else if (keys.ArrowRight) {
+        player.vx = player.speed;
+        player.facing = 'right';
+        player.animFrame += 0.2;
+      } else {
+        player.vx = 0;
+        player.animFrame = 0;
+      }
 
       player.vy += player.gravity;
       player.x += player.vx;
@@ -529,7 +542,56 @@ HTML
       if (gameState === 'GAMEOVER') return;
       gameState = 'GAMEOVER';
       playSound('die');
-      createParticles(player.x, player.y, '#ef4444', 20);
+      createParticles(player.x + 10, player.y + 12, '#ef4444', 20);
+    }
+
+    // ★ 실체화된 캐릭터 그래픽 그리기 함수
+    function drawPlayer(x, y) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      const legOffset = Math.sin(player.animFrame) * 4;
+
+      // 1. 머리/몸통
+      ctx.fillStyle = player.color;
+      ctx.beginPath();
+      ctx.roundRect(0, 0, 20, 18, 4);
+      ctx.fill();
+
+      // 캐릭터 특수 악세서리
+      if (player.type === 'dash') {
+        // 고글
+        ctx.fillStyle = '#0284c7';
+        ctx.fillRect(player.facing === 'right' ? 6 : 2, 3, 12, 5);
+      } else if (player.type === 'hopper') {
+        // 귀/안테나
+        ctx.fillStyle = '#22c55e';
+        ctx.fillRect(4, -4, 3, 5);
+        ctx.fillRect(13, -4, 3, 5);
+      }
+
+      // 2. 눈 (시선 방향 구현)
+      ctx.fillStyle = player.eyeColor;
+      const eyeX = player.facing === 'right' ? 12 : 3;
+      ctx.fillRect(eyeX, 6, 4, 5);
+      if (player.type !== 'dash') {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(eyeX + (player.facing === 'right' ? 2 : 0), 6, 2, 2);
+      }
+
+      // 3. 다리 애니메이션 (달리기/점프)
+      ctx.fillStyle = '#334155';
+      if (!player.grounded) {
+        // 점프 포즈
+        ctx.fillRect(3, 17, 4, 6);
+        ctx.fillRect(13, 15, 4, 6);
+      } else {
+        // 달리기 애니메이션 다리
+        ctx.fillRect(3, 17, 4, 7 + legOffset);
+        ctx.fillRect(13, 17, 4, 7 - legOffset);
+      }
+
+      ctx.restore();
     }
 
     function draw() {
@@ -561,9 +623,8 @@ HTML
       ctx.font = 'bold 12px sans-serif';
       ctx.fillText('FINISH', finishLine.x + 1, finishLine.y + 60);
 
-      // 플레이어
-      ctx.fillStyle = player.color;
-      ctx.fillRect(player.x, player.y, player.width, player.height);
+      // 실체화 캐릭터 그리기 호출
+      drawPlayer(player.x, player.y);
 
       particles.forEach(p => {
         ctx.fillStyle = p.color;
