@@ -3,73 +3,73 @@ HTML
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>트랩 대시: 익스트림 (Trap Dash EXTREME)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>트랩 대시: 모바일 지원</title>
   <style>
-    * { box-sizing: border-box; }
-    html, body {
-      margin: 0; padding: 0; width: 100%; height: 100%;
-      overflow-x: hidden; background: #090d16; color: #f8fafc;
-      font-family: 'Segoe UI', -apple-system, sans-serif;
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0; padding: 0; background: #090d16; color: #f8fafc;
+      font-family: 'Segoe UI', sans-serif;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 100vh; overflow: hidden; touch-action: manipulation;
     }
-    .game-container {
-      display: flex; flex-direction: column; align-items: center;
-      width: 100%; max-width: 680px; padding: 10px;
-    }
-    h1 {
-      margin: 2px 0 6px 0; color: #ef4444; font-size: 20px; text-align: center;
-    }
+    .game-container { width: 100%; max-width: 660px; padding: 10px; text-align: center; }
+    h1 { margin: 0 0 6px 0; color: #ef4444; font-size: 18px; }
     .controls-bar {
-      display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center;
-      margin-bottom: 8px; background: #1e293b; padding: 6px 12px; border-radius: 12px;
-      border: 1px solid #334155; font-size: 11px; color: #cbd5e1; width: 100%;
+      display: flex; gap: 8px; align-items: center; justify-content: center;
+      margin-bottom: 8px; background: #1e293b; padding: 6px; border-radius: 8px;
+      font-size: 11px; border: 1px solid #334155;
     }
-    .controls-bar select, .controls-bar input { cursor: pointer; }
-    .canvas-wrapper { width: 100%; display: flex; justify-content: center; }
     canvas {
       background: #111827; border: 2px solid #ef4444; border-radius: 8px;
-      width: 100%; max-width: 660px; height: auto; aspect-ratio: 660 / 320;
+      width: 100%; height: auto; aspect-ratio: 660 / 320; touch-action: none;
+    }
+    .toggle-box { background: #dc2626; color: white; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+
+    /* 📱 모바일 가상 패드 스타일 */
+    .mobile-controls {
+      display: flex; justify-content: space-between; align-items: center;
+      width: 100%; margin-top: 10px; padding: 0 5px; user-select: none;
+    }
+    .d-pad { display: flex; gap: 10px; }
+    .btn {
+      background: #334155; color: #fff; border: 2px solid #475569;
+      border-radius: 12px; font-size: 18px; font-weight: bold;
+      display: flex; align-items: center; justify-content: center;
+      active { background: #ef4444; border-color: #f8fafc; }
       cursor: pointer;
     }
-    .rank-board {
-      margin-top: 8px; background: #1f2937; padding: 8px 12px; border-radius: 8px;
-      border: 1px solid #374151; width: 100%; font-size: 12px;
-    }
-    .rank-header { display: flex; justify-content: space-between; align-items: center; color: #f59e0b; }
-    .reset-btn { background: #374151; color: #9ca3af; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; }
-    .reset-btn:hover { background: #ef4444; color: #fff; }
-    .rank-list { margin: 4px 0 0 0; padding-left: 20px; display: flex; gap: 15px; color: #cbd5e1; }
+    .btn-dir { width: 60px; height: 50px; }
+    .btn-jump { width: 90px; height: 50px; background: #2563eb; border-color: #3b82f6; }
+    .btn-utility { width: 50px; height: 35px; font-size: 12px; background: #475569; }
+    .utility-group { display: flex; gap: 6px; }
   </style>
 </head>
 <body>
 
   <div class="game-container">
-    <h1>☠️ TRAP DASH : EXTREME (HARDCORE)</h1>
+    <h1>☠️ TRAP DASH : MOBILE</h1>
     
     <div class="controls-bar">
-      <span>🎮 [←][→] 이동 | [Space] 점프 | [P] 일시정지 | [R] 처음부터</span>
-      <label>👤 캐릭터:
-        <select id="charSelect">
-          <option value="runner">🟡 런너 (밸런스)</option>
-          <option value="dash">🔵 대시 (고속)</option>
-          <option value="hopper">🟢 호퍼 (고점프)</option>
-        </select>
+      <span>🎮 [PC] 방향키, Space | [모바일] 터치 버튼</span>
+      <label class="toggle-box">
+        <input type="checkbox" id="reduceMotionToggle"> ⚡ 효과 감소
       </label>
-      <label><input type="checkbox" id="reduceMotionToggle"> ⚡ 효과 감소</label>
-      <label><input type="checkbox" id="muteToggle"> 🔇 음소거</label>
     </div>
 
-    <div class="canvas-wrapper">
-      <canvas id="gameCanvas" width="660" height="320"></canvas>
-    </div>
+    <canvas id="gameCanvas" width="660" height="320"></canvas>
 
-    <div class="rank-board">
-      <div class="rank-header">
-        <span>🏆 최고 기록 (BEST RECORDS)</span>
-        <button class="reset-btn" onclick="resetLeaderboard()">초기화</button>
+    <!-- 📱 모바일 가상 패드 UI -->
+    <div class="mobile-controls">
+      <div class="d-pad">
+        <button class="btn btn-dir" id="btnLeft">◀</button>
+        <button class="btn btn-dir" id="btnRight">▶</button>
       </div>
-      <ol id="rankList" class="rank-list"><li>기록 없음</li></ol>
+      <div class="utility-group">
+        <button class="btn btn-utility" id="btnPause">⏸️ 일시정지</button>
+        <button class="btn btn-utility" id="btnReset">🔄 재시작</button>
+      </div>
+      <button class="btn btn-jump" id="btnJump">JUMP</button>
     </div>
   </div>
 
@@ -77,366 +77,164 @@ HTML
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    const keys = { ArrowLeft: false, ArrowRight: false, Space: false };
-    let spaceHandled = false;
-
     const reduceMotionToggle = document.getElementById('reduceMotionToggle');
-    const muteToggle = document.getElementById('muteToggle');
-    const charSelect = document.getElementById('charSelect');
-
     let reduceMotion = false;
-    let isMuted = false;
-
     reduceMotionToggle.addEventListener('change', (e) => { reduceMotion = e.target.checked; });
-    muteToggle.addEventListener('change', (e) => { isMuted = e.target.checked; });
-    charSelect.addEventListener('change', (e) => { applyCharacterStats(e.target.value); });
 
-    const CHARACTERS = {
-      runner: { name: '런너', color: '#facc15', eyeColor: '#000', speed: 3.8, jumpPower: -8.2, type: 'runner' },
-      dash:   { name: '대시', color: '#38bdf8', eyeColor: '#fff', speed: 4.6, jumpPower: -7.8, type: 'dash' },
-      hopper: { name: '호퍼', color: '#4ade80', eyeColor: '#1e293b', speed: 3.4, jumpPower: -9.0, type: 'hopper' }
-    };
+    let gameState = 'START';
+    let player = { x: 30, y: 180, w: 20, h: 24, vx: 0, vy: 0, speed: 3.8, jumpCount: 0 };
+    let cameraX = 0, shakeTime = 0, shakeIntensity = 0;
+    let particles = [];
+    const keys = { ArrowLeft: false, ArrowRight: false };
 
-    const player = {
-      x: 30, y: 180, width: 20, height: 24, vx: 0, vy: 0,
-      speed: 3.8, gravity: 0.48, jumpPower: -8.2, jumpCount: 0, maxJumps: 2,
-      grounded: false, color: '#facc15', eyeColor: '#000', facing: 'right', animFrame: 0, type: 'runner'
-    };
-
-    function applyCharacterStats(type) {
-      const stats = CHARACTERS[type] || CHARACTERS.runner;
-      player.speed = stats.speed;
-      player.jumpPower = stats.jumpPower;
-      player.color = stats.color;
-      player.eyeColor = stats.eyeColor;
-      player.type = stats.type;
-    }
-
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    let audioCtx = null;
-
-    function playSound(type) {
-      if (isMuted) return;
-      try {
-        if (!audioCtx) audioCtx = new AudioCtx();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
-
-        if (type === 'jump') {
-          osc.frequency.setValueAtTime(300, audioCtx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
-          gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-          gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-          osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-        } else if (type === 'die') {
-          osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(150, audioCtx.currentTime);
-          osc.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 0.25);
-          gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-          gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
-          osc.start(); osc.stop(audioCtx.currentTime + 0.25);
-        } else if (type === 'clear') {
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(440, audioCtx.currentTime);
-          osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15);
-          gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-          gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
-          osc.start(); osc.stop(audioCtx.currentTime + 0.35);
-        }
-      } catch (e) {}
-    }
-
-    const mapWidth = 4000;
-    let cameraX = 0, gameTime = 0, gameState = 'START', lastTime = performance.now();
-    const finishLine = { x: 3900, y: 130, width: 35, height: 110 };
-
-    const platforms = [
-      { x: 0, y: 240, w: 350 }, { x: 420, y: 240, w: 220 }, { x: 720, y: 200, w: 180 },
-      { x: 1000, y: 240, w: 300 }, { x: 1400, y: 210, w: 180 }, { x: 1680, y: 240, w: 250 },
-      { x: 2030, y: 180, w: 160 }, { x: 2290, y: 240, w: 300 }, { x: 2700, y: 200, w: 200 },
-      { x: 3000, y: 240, w: 200 }, { x: 3300, y: 220, w: 200 }, { x: 3600, y: 240, w: 350 }
+    const obstacles = [
+      { x: 150, y: 220, w: 20, h: 20 },
+      { x: 300, y: 200, w: 20, h: 40 },
+      { x: 450, y: 220, w: 20, h: 20 },
+      { x: 600, y: 180, w: 30, h: 20 }
     ];
 
-    let obstacles = [], particles = [];
-
-    // 🔥 난이도 최상: 촘촘하고 빽빽해진 장애물 패턴
-    function initObstacles() {
-      obstacles = [
-        { x: 120, y: 220, w: 18, h: 20, type: 'spike' },
-        { x: 200, y: 240, w: 20, h: 20, type: 'popup_spike', triggered: false },
-        { x: 260, y: 240, w: 40, h: 10, type: 'fake_floor', broken: false },
-        { x: 450, y: -50, w: 35, h: 35, type: 'falling_rock', triggered: false, vy: 0 },
-        { x: 530, y: 220, w: 18, h: 20, type: 'patrol', minX: 480, maxX: 610, dir: 1 },
-        { x: 750, y: 180, w: 18, h: 20, type: 'spike' },
-        { x: 820, y: 180, w: 20, h: 20, type: 'popup_spike', triggered: false },
-        { x: 1050, y: -50, w: 30, h: 30, type: 'falling_rock', triggered: false, vy: 0 },
-        { x: 1120, y: 240, w: 50, h: 10, type: 'fake_floor', broken: false },
-        { x: 1210, y: 220, w: 18, h: 20, type: 'spike' },
-        { x: 1440, y: 190, w: 20, h: 15, type: 'homing', triggered: false },
-        { x: 1510, y: 190, w: 18, h: 20, type: 'patrol', minX: 1420, maxX: 1560, dir: -1 },
-        { x: 1720, y: 240, w: 60, h: 10, type: 'fake_floor', broken: false },
-        { x: 1820, y: -50, w: 40, h: 40, type: 'falling_rock', triggered: false, vy: 0 },
-        { x: 2060, y: 160, w: 18, h: 20, type: 'spike' },
-        { x: 2120, y: 160, w: 20, h: 15, type: 'homing', triggered: false },
-        { x: 2330, y: 240, w: 20, h: 20, type: 'popup_spike', triggered: false },
-        { x: 2420, y: 220, w: 18, h: 20, type: 'patrol', minX: 2350, maxX: 2550, dir: 1 },
-        { x: 2510, y: -50, w: 35, h: 35, type: 'falling_rock', triggered: false, vy: 0 },
-        { x: 2740, y: 180, w: 18, h: 20, type: 'spike' },
-        { x: 2820, y: 180, w: 20, h: 15, type: 'homing', triggered: false },
-        { x: 3040, y: 240, w: 40, h: 10, type: 'fake_floor', broken: false },
-        { x: 3120, y: 220, w: 20, h: 20, type: 'popup_spike', triggered: false },
-        { x: 3340, y: 200, w: 18, h: 20, type: 'spike' },
-        { x: 3420, y: -50, w: 45, h: 45, type: 'falling_rock', triggered: false, vy: 0 },
-        { x: 3640, y: 220, w: 20, h: 15, type: 'homing', triggered: false },
-        { x: 3720, y: 240, w: 20, h: 20, type: 'popup_spike', triggered: false },
-        { x: 3800, y: 220, w: 18, h: 20, type: 'spike' }
-      ];
+    // 📱 터치 및 키보드 통합 컨트롤
+    function handleJump() {
+      if (gameState === 'PLAYING' && player.jumpCount < 2) {
+        player.vy = -8.5; player.jumpCount++;
+        createParticles(player.x + 10, player.y + 24, '#f8fafc', 12, 4);
+      } else if (gameState !== 'PLAYING' && gameState !== 'PAUSED') {
+        resetGame();
+      }
     }
 
-    function togglePause() {
-      if (gameState === 'PLAYING') gameState = 'PAUSED';
-      else if (gameState === 'PAUSED') { gameState = 'PLAYING'; lastTime = performance.now(); }
+    function handlePause() {
+      if (gameState === 'PLAYING' || gameState === 'PAUSED') {
+        gameState = gameState === 'PLAYING' ? 'PAUSED' : 'PLAYING';
+      }
     }
 
-    window.addEventListener('blur', () => { if (gameState === 'PLAYING') gameState = 'PAUSED'; });
-
-    canvas.addEventListener('click', (e) => {
-      if (gameState === 'PAUSED') {
-        const rect = canvas.getBoundingClientRect();
-        const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
-        // 일시정지 중 하단 재시작 버튼 영역 클릭 시
-        if (clickY > 210 && clickY < 250) {
-          startGame();
-          return;
-        }
-        togglePause();
-      } else if (gameState !== 'PLAYING') {
-        startGame();
-      }
+    // PC 키보드 이벤트
+    window.addEventListener('keydown', e => {
+      if (e.code === 'ArrowLeft') keys.ArrowLeft = true;
+      if (e.code === 'ArrowRight') keys.ArrowRight = true;
+      if (e.code === 'KeyP') handlePause();
+      if (e.code === 'KeyR' && gameState === 'PAUSED') resetGame();
+      if (e.code === 'Space') handleJump();
+    });
+    window.addEventListener('keyup', e => {
+      if (e.code === 'ArrowLeft') keys.ArrowLeft = false;
+      if (e.code === 'ArrowRight') keys.ArrowRight = false;
     });
 
-    window.addEventListener('keydown', (e) => {
-      if (e.code === 'KeyP') { togglePause(); return; }
-      if (e.code === 'KeyR' && gameState === 'PAUSED') { startGame(); return; }
+    // 📱 모바일 터치 이벤트 바인딩
+    const bindTouch = (id, onPress, onRelease) => {
+      const el = document.getElementById(id);
+      el.addEventListener('touchstart', (e) => { e.preventDefault(); onPress(); }, { passive: false });
+      el.addEventListener('touchend', (e) => { e.preventDefault(); if (onRelease) onRelease(); }, { passive: false });
+      el.addEventListener('mousedown', onPress);
+      el.addEventListener('mouseup', onRelease);
+    };
 
-      if (['Space', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
-        if (e.code === 'Space' && !spaceHandled) {
-          spaceHandled = true;
-          if (gameState === 'PAUSED') togglePause();
-          else if (gameState === 'PLAYING' && player.jumpCount < player.maxJumps) {
-            player.vy = player.jumpPower; player.jumpCount++; playSound('jump');
-            createParticles(player.x + 10, player.y + 24, player.color, 4);
-          } else if (gameState !== 'PLAYING') startGame();
-        }
-        keys[e.code] = true;
-      }
+    bindTouch('btnLeft', () => keys.ArrowLeft = true, () => keys.ArrowLeft = false);
+    bindTouch('btnRight', () => keys.ArrowRight = true, () => keys.ArrowRight = false);
+    bindTouch('btnJump', handleJump);
+    bindTouch('btnPause', handlePause);
+    bindTouch('btnReset', () => { if (gameState === 'PAUSED') resetGame(); });
+
+    canvas.addEventListener('click', () => {
+      if (gameState !== 'PLAYING' && gameState !== 'PAUSED') resetGame();
     });
 
-    window.addEventListener('keyup', (e) => {
-      if (e.code === 'Space') spaceHandled = false;
-      if (keys.hasOwnProperty(e.code)) keys[e.code] = false;
-    });
-
-    function startGame() {
-      applyCharacterStats(charSelect.value);
+    function resetGame() {
       player.x = 30; player.y = 180; player.vx = 0; player.vy = 0; player.jumpCount = 0;
-      cameraX = 0; gameTime = 0; particles = []; initObstacles();
-      gameState = 'PLAYING'; lastTime = performance.now();
+      cameraX = 0; particles = []; shakeTime = 0; gameState = 'PLAYING';
     }
 
-    function getSafeRecords() {
-      try {
-        const raw = localStorage.getItem('trap_extreme_ranks');
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed.filter(n => typeof n === 'number' && !isNaN(n)) : [];
-      } catch (e) {
-        return [];
-      }
-    }
-
-    function saveRecord(time) {
-      let records = getSafeRecords();
-      records.push(parseFloat(time.toFixed(1)));
-      records.sort((a, b) => a - b);
-      records = records.slice(0, 3);
-      try { localStorage.setItem('trap_extreme_ranks', JSON.stringify(records)); } catch (e) {}
-      updateRankBoard();
-    }
-
-    function updateRankBoard() {
-      const records = getSafeRecords();
-      const rankListEl = document.getElementById('rankList');
-      if (records.length === 0) rankListEl.innerHTML = '<li>기록 없음</li>';
-      else rankListEl.innerHTML = records.map((r, i) => `<li><b>${i+1}위:</b> ${r}초</li>`).join('');
-    }
-
-    function resetLeaderboard() {
-      try { localStorage.removeItem('trap_extreme_ranks'); } catch (e) {}
-      updateRankBoard();
-    }
-
-    function createParticles(x, y, color, count) {
+    function createParticles(x, y, color, count, maxSpeed = 5, size = 4) {
       if (reduceMotion) return;
       for (let i = 0; i < count; i++) {
         particles.push({
-          x, y, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4,
-          life: 1.0, color
+          x, y,
+          vx: (Math.random() - 0.5) * maxSpeed,
+          vy: (Math.random() - 0.5) * maxSpeed,
+          size: Math.random() * size + 2,
+          color, life: 1.0
         });
       }
     }
 
-    function update(dt) {
+    function triggerShake(intensity, duration) {
+      if (reduceMotion) return;
+      shakeIntensity = intensity; shakeTime = duration;
+    }
+
+    function update() {
       if (gameState !== 'PLAYING') return;
-      const effectiveDt = Math.min(dt, 0.1);
-      gameTime += effectiveDt;
 
-      if (keys.ArrowLeft) { player.vx = -player.speed; player.facing = 'left'; player.animFrame += 0.2; }
-      else if (keys.ArrowRight) { player.vx = player.speed; player.facing = 'right'; player.animFrame += 0.2; }
-      else { player.vx = 0; player.animFrame = 0; }
+      if (keys.ArrowLeft) player.x -= player.speed;
+      if (keys.ArrowRight) player.x += player.speed;
+      player.vy += 0.45; player.y += player.vy;
 
-      player.vy += player.gravity; player.x += player.vx; player.y += player.vy;
+      if (player.y >= 216) { player.y = 216; player.vy = 0; player.jumpCount = 0; }
       if (player.x < 0) player.x = 0;
 
-      player.grounded = false;
-      platforms.forEach(p => {
-        if (
-          player.x + player.width > p.x && player.x < p.x + p.w &&
-          player.y + player.height >= p.y && player.y + player.height <= p.y + 15 && player.vy >= 0
-        ) {
-          player.y = p.y - player.height; player.vy = 0; player.jumpCount = 0; player.grounded = true;
+      cameraX = player.x - 100;
+
+      obstacles.forEach(o => {
+        if (player.x < o.x + o.w && player.x + player.w > o.x && player.y < o.y + o.h && player.y + player.h > o.y) {
+          gameState = 'GAMEOVER';
+          createParticles(player.x + 10, player.y + 12, '#ef4444', 40, 10, 6);
+          triggerShake(8, 20);
         }
       });
 
-      if (player.y > canvas.height + 40) triggerGameOver();
-
-      cameraX = player.x - 180;
-      if (cameraX < 0) cameraX = 0;
-      if (cameraX > mapWidth - canvas.width) cameraX = mapWidth - canvas.width;
-
-      obstacles.forEach(obs => {
-        if (obs.type === 'popup_spike') {
-          if (Math.abs(player.x - obs.x) < 90) obs.triggered = true;
-          if (obs.triggered && obs.y > 195) obs.y -= 5;
-        }
-        if (obs.type === 'fake_floor') {
-          if (player.x + player.width > obs.x && player.x < obs.x + obs.w && Math.abs((player.y + player.height) - obs.y) < 5) obs.broken = true;
-        }
-        if (obs.type === 'falling_rock') {
-          if (Math.abs(player.x - obs.x) < 140) obs.triggered = true;
-          if (obs.triggered) { obs.vy += 0.7; obs.y += obs.vy; }
-        }
-        if (obs.type === 'patrol') {
-          obs.x += obs.dir * 3.0;
-          if (obs.x < obs.minX || obs.x > obs.maxX) obs.dir *= -1;
-        }
-        if (obs.type === 'homing') {
-          if (Math.abs(player.x - obs.x) < 280) obs.triggered = true;
-          if (obs.triggered) obs.x -= 7.5;
-        }
-        if (obs.type !== 'fake_floor' || !obs.broken) {
-          if (player.x < obs.x + obs.w && player.x + player.width > obs.x && player.y < obs.y + obs.h && player.y + player.height > obs.y) triggerGameOver();
-        }
-      });
-
-      if (player.x < finishLine.x + finishLine.width && player.x + player.width > finishLine.x && player.y < finishLine.y + finishLine.height && player.y + player.height > finishLine.y) {
-        gameState = 'CLEAR'; playSound('clear'); saveRecord(gameTime); createParticles(player.x, player.y, '#10b981', 25);
+      if (player.x >= 800) {
+        gameState = 'CLEAR';
+        createParticles(player.x, player.y, '#10b981', 60, 12, 5);
       }
 
       for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i]; p.x += p.vx; p.y += p.vy; p.life -= 0.05;
+        let p = particles[i];
+        p.x += p.vx; p.y += p.vy; p.life -= 0.03;
         if (p.life <= 0) particles.splice(i, 1);
       }
-    }
 
-    function triggerGameOver() {
-      if (gameState === 'GAMEOVER') return;
-      gameState = 'GAMEOVER'; playSound('die'); createParticles(player.x + 10, player.y + 12, '#ef4444', 15);
-    }
-
-    function drawPlayer(x, y) {
-      ctx.save(); ctx.translate(x, y);
-      const legOffset = Math.sin(player.animFrame) * 4;
-
-      ctx.fillStyle = player.color; ctx.beginPath(); ctx.roundRect(0, 0, 20, 18, 4); ctx.fill();
-
-      if (player.type === 'dash') { ctx.fillStyle = '#0284c7'; ctx.fillRect(player.facing === 'right' ? 6 : 2, 3, 12, 5); }
-      else if (player.type === 'hopper') { ctx.fillStyle = '#22c55e'; ctx.fillRect(4, -4, 3, 5); ctx.fillRect(13, -4, 3, 5); }
-
-      ctx.fillStyle = player.eyeColor;
-      const eyeX = player.facing === 'right' ? 12 : 3;
-      ctx.fillRect(eyeX, 6, 4, 5);
-
-      ctx.fillStyle = '#334155';
-      if (!player.grounded) { ctx.fillRect(3, 17, 4, 6); ctx.fillRect(13, 15, 4, 6); }
-      else { ctx.fillRect(3, 17, 4, 7 + legOffset); ctx.fillRect(13, 17, 4, 7 - legOffset); }
-      ctx.restore();
+      if (shakeTime > 0) shakeTime--;
     }
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.save(); ctx.translate(-cameraX, 0);
+      ctx.save();
 
-      platforms.forEach(p => { ctx.fillStyle = '#1e293b'; ctx.fillRect(p.x, p.y, p.w, 80); });
-      obstacles.forEach(obs => {
-        if (obs.type === 'fake_floor') { if (!obs.broken) { ctx.fillStyle = '#334155'; ctx.fillRect(obs.x, obs.y, obs.w, obs.h); } }
-        else { ctx.fillStyle = '#ef4444'; ctx.fillRect(obs.x, obs.y, obs.w, obs.h); }
+      if (shakeTime > 0) {
+        let dx = (Math.random() - 0.5) * shakeIntensity;
+        let dy = (Math.random() - 0.5) * shakeIntensity;
+        ctx.translate(dx, dy);
+      }
+
+      ctx.translate(-cameraX, 0);
+
+      ctx.fillStyle = '#334155'; ctx.fillRect(0, 240, 1000, 80);
+      ctx.fillStyle = '#ef4444'; obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.w, o.h));
+      ctx.fillStyle = '#10b981'; ctx.fillRect(800, 160, 20, 80);
+      ctx.fillStyle = '#facc15'; ctx.fillRect(player.x, player.y, player.w, player.h);
+
+      particles.forEach(p => {
+        ctx.fillStyle = p.color; ctx.globalAlpha = p.life;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
       });
-
-      ctx.fillStyle = '#10b981'; ctx.fillRect(finishLine.x, finishLine.y, finishLine.width, finishLine.height);
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('FINISH', finishLine.x + 1, finishLine.y + 60);
-
-      drawPlayer(player.x, player.y);
-
-      particles.forEach(p => { ctx.fillStyle = p.color; ctx.globalAlpha = p.life; ctx.fillRect(p.x, p.y, 3, 3); });
       ctx.globalAlpha = 1.0; ctx.restore();
 
-      ctx.fillStyle = '#f8fafc'; ctx.font = 'bold 13px sans-serif';
-      ctx.fillText(`⏱️ 시간: ${gameTime.toFixed(1)}초`, 15, 25);
-      const progress = Math.min(100, Math.floor((player.x / finishLine.x) * 100));
-      ctx.fillText(`🚩 진행도: ${progress}% (난이도: 최상)`, 15, 45);
-
       if (gameState !== 'PLAYING') {
-        ctx.fillStyle = 'rgba(9, 13, 22, 0.88)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.textAlign = 'center';
-        if (gameState === 'START') {
-          ctx.fillStyle = '#ef4444'; ctx.font = 'bold 24px sans-serif'; ctx.fillText('TRAP DASH : EXTREME (HARDCORE)', canvas.width / 2, 110);
-          ctx.fillStyle = '#cbd5e1'; ctx.font = '13px sans-serif'; ctx.fillText('극악의 트랩을 돌파하세요!', canvas.width / 2, 150);
-          ctx.fillStyle = '#f59e0b'; ctx.fillText('[Space] 키 또는 클릭하여 시작', canvas.width / 2, 200);
-        } else if (gameState === 'PAUSED') {
-          ctx.fillStyle = '#38bdf8'; ctx.font = 'bold 26px sans-serif'; ctx.fillText('⏸️ PAUSED (일시정지)', canvas.width / 2, 100);
-          ctx.fillStyle = '#cbd5e1'; ctx.font = '14px sans-serif'; ctx.fillText('[P] 키 또는 화면 클릭: 계속 진행', canvas.width / 2, 150);
-          
-          // 처음부터 다시하기 UI 추가
-          ctx.fillStyle = '#ef4444';
-          ctx.fillRect(canvas.width / 2 - 110, 185, 220, 36);
-          ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px sans-serif';
-          ctx.fillText('🔄 [R] 키: 처음부터 다시 시작', canvas.width / 2, 208);
-        } else if (gameState === 'GAMEOVER') {
-          ctx.fillStyle = '#ef4444'; ctx.font = 'bold 26px sans-serif'; ctx.fillText('☠️ YOU DIED', canvas.width / 2, 110);
-          ctx.fillStyle = '#cbd5e1'; ctx.font = '14px sans-serif'; ctx.fillText(`진행도 ${progress}% 지점 사망`, canvas.width / 2, 155);
-          ctx.fillStyle = '#38bdf8'; ctx.fillText('[Space] 키를 눌러 재도전', canvas.width / 2, 200);
-        } else if (gameState === 'CLEAR') {
-          ctx.fillStyle = '#10b981'; ctx.font = 'bold 26px sans-serif'; ctx.fillText('🏆 EXTREME CLEAR!!', canvas.width / 2, 110);
-          ctx.fillStyle = '#f8fafc'; ctx.font = '15px sans-serif'; ctx.fillText(`기록: ${gameTime.toFixed(1)}초`, canvas.width / 2, 155);
-          ctx.fillStyle = '#f59e0b'; ctx.fillText('[Space] 키를 눌러 다시 도전', canvas.width / 2, 200);
-        }
+        ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '20px sans-serif';
+        if (gameState === 'START') ctx.fillText('화면 또는 버튼을 터치해 시작', 330, 160);
+        if (gameState === 'PAUSED') ctx.fillText('⏸️ 일시정지 (버튼 터치로 계속/재시작)', 330, 160);
+        if (gameState === 'GAMEOVER') ctx.fillText('☠️ 실패! 터치하여 재도전', 330, 160);
+        if (gameState === 'CLEAR') ctx.fillText('🏆 성공! 터치하여 재도전', 330, 160);
         ctx.textAlign = 'left';
       }
     }
 
-    function gameLoop(timestamp) {
-      const dt = (timestamp - lastTime) / 1000;
-      lastTime = timestamp;
-      update(dt); draw();
-      requestAnimationFrame(gameLoop);
-    }
-
-    applyCharacterStats('runner');
-    updateRankBoard();
-    requestAnimationFrame(gameLoop);
+    function loop() { update(); draw(); requestAnimationFrame(loop); }
+    requestAnimationFrame(loop);
   </script>
 </body>
 </html>
