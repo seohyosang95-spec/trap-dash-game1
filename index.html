@@ -1,0 +1,404 @@
+HTML
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>트랩 대시: 익스트림 (Trap Dash EXTREME)</title>
+  <style>
+    body {
+      margin: 0;
+      background: #090d16;
+      color: #f8fafc;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    h1 { margin: 5px 0; color: #ef4444; text-shadow: 0 0 12px #ef4444; font-size: 26px; }
+    p { margin-bottom: 12px; color: #94a3b8; font-size: 13px; }
+    canvas {
+      background: #111827;
+      border: 2px solid #ef4444;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(239, 68, 68, 0.2);
+      cursor: pointer;
+    }
+    .rank-board {
+      margin-top: 12px;
+      background: #1f2937;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: 1px solid #374151;
+      width: 660px;
+      box-sizing: border-box;
+    }
+    .rank-board h3 { margin: 0 0 6px 0; font-size: 14px; color: #f59e0b; }
+    .rank-list { margin: 0; padding-left: 20px; font-size: 13px; color: #cbd5e1; display: flex; gap: 30px; }
+  </style>
+</head>
+<body>
+
+  <h1>☠️ TRAP DASH : EXTREME (난이도 최상)</h1>
+  <p>[←][→] 이동 | [Space] 점프 (2단 점프 가능) | ⚠️ 억울한 트랩 주의 (기회 단 1번)</p>
+  <canvas id="gameCanvas" width="660" height="320"></canvas>
+
+  <div class="rank-board">
+    <h3>🏆 명예의 전당 (BEST CLEAR RECORDS)</h3>
+    <ol id="rankList" class="rank-list">
+      <li>기록 없음</li>
+    </ol>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const keys = { ArrowLeft: false, ArrowRight: false, Space: false };
+
+    // 플레이어
+    const player = {
+      x: 30, y: 200, width: 18, height: 18,
+      vx: 0, vy: 0, speed: 3.8,
+      gravity: 0.48, jumpPower: -8.8,
+      jumpCount: 0, maxJumps: 2,
+      grounded: false
+    };
+
+    // 초장거리 맵 (4000px)
+    const mapWidth = 4000;
+    let cameraX = 0;
+    let gameTime = 0;
+    let timerInterval = null;
+    let gameState = 'START';
+
+    // 결승점 (4000px 지점)
+    const finishLine = { x: 3900, y: 130, width: 35, height: 110 };
+
+    // 발판 구조 (공중 섬 형태 포함)
+    const platforms = [
+      { x: 0, y: 240, w: 400 },
+      { x: 470, y: 240, w: 300 },
+      { x: 830, y: 200, w: 250 },
+      { x: 1150, y: 240, w: 400 },
+      { x: 1620, y: 210, w: 200 },
+      { x: 1890, y: 240, w: 350 },
+      { x: 2300, y: 180, w: 200 },
+      { x: 2570, y: 240, w: 400 },
+      { x: 3040, y: 200, w: 250 },
+      { x: 3350, y: 240, w: 600 }
+    ];
+
+    let obstacles = [];
+
+    // 대량의 트랩 배열 생성
+    function initObstacles() {
+      obstacles = [
+        // [구역 1] 0 ~ 800px (초반 억까 트랩)
+        { x: 150, y: 220, w: 18, h: 20, type: 'spike' },
+        { x: 280, y: 240, w: 20, h: 20, type: 'popup_spike', triggered: false }, // 다가가면 솟구침
+        { x: 360, y: 240, w: 40, h: 10, type: 'fake_floor', broken: false }, // 거울상 속임수 발판
+        { x: 500, y: -50, w: 30, h: 30, type: 'falling_rock', triggered: false, vy: 0 }, // 대형 낙석
+        { x: 620, y: 220, w: 18, h: 20, type: 'patrol', minX: 580, maxX: 700, dir: 1 },
+        { x: 730, y: 150, w: 20, h: 20, type: 'spike' },
+
+        // [구역 2] 800 ~ 1800px (반전 기믹)
+        { x: 880, y: 180, w: 18, h: 20, type: 'popup_spike', triggered: false },
+        { x: 980, y: -50, w: 25, h: 25, type: 'falling_rock', triggered: false, vy: 0 },
+        { x: 1080, y: 240, w: 70, h: 10, type: 'fake_floor', broken: false },
+        { x: 1220, y: 220, w: 18, h: 20, type: 'spike' },
+        { x: 1300, y: 240, w: 20, h: 20, type: 'popup_spike', triggered: false },
+        { x: 1400, y: 220, w: 18, h: 20, type: 'patrol', minX: 1350, maxX: 1500, dir: -1 },
+        { x: 1520, y: 240, w: 100, h: 10, type: 'fake_floor', broken: false },
+        { x: 1680, y: 120, w: 25, h: 25, type: 'falling_rock', triggered: false, vy: 0 },
+
+        // [구역 3] 1800 ~ 2800px (유도 탄막 & 가속 함정)
+        { x: 1950, y: 220, w: 18, h: 20, type: 'spike' },
+        { x: 2050, y: 200, w: 20, h: 15, type: 'homing', triggered: false, vx: 0 }, // 초고속 미사일
+        { x: 2150, y: 240, w: 20, h: 20, type: 'popup_spike', triggered: false },
+        { x: 2250, y: -50, w: 30, h: 30, type: 'falling_rock', triggered: false, vy: 0 },
+        { x: 2380, y: 160, w: 18, h: 20, type: 'spike' },
+        { x: 2480, y: 240, w: 90, h: 10, type: 'fake_floor', broken: false },
+        { x: 2650, y: 220, w: 18, h: 20, type: 'patrol', minX: 2600, maxX: 2750, dir: 1 },
+        { x: 2780, y: 200, w: 20, h: 15, type: 'homing', triggered: false, vx: 0 },
+
+        // [구역 4] 2800 ~ 4000px (마지막 최악의 연쇄 트랩 구역)
+        { x: 2900, y: 240, w: 20, h: 20, type: 'popup_spike', triggered: false },
+        { x: 3000, y: -50, w: 35, h: 35, type: 'falling_rock', triggered: false, vy: 0 },
+        { x: 3100, y: 180, w: 18, h: 20, type: 'spike' },
+        { x: 3200, y: 200, w: 20, h: 15, type: 'homing', triggered: false, vx: 0 },
+        { x: 3300, y: 240, w: 50, h: 10, type: 'fake_floor', broken: false },
+        { x: 3450, y: 220, w: 20, h: 20, type: 'popup_spike', triggered: false },
+        { x: 3550, y: 220, w: 18, h: 20, type: 'spike' },
+        { x: 3650, y: -50, w: 40, h: 40, type: 'falling_rock', triggered: false, vy: 0 }, // 초대형 낙석
+        { x: 3750, y: 200, w: 20, h: 15, type: 'homing', triggered: false, vx: 0 }, // 골대 앞 최종 통곡의 미사일
+        { x: 3820, y: 240, w: 20, h: 20, type: 'popup_spike', triggered: false }
+      ];
+    }
+
+    // 키 조작
+    window.addEventListener('keydown', (e) => {
+      if (['Space', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+        if (e.code === 'Space' && !keys.Space) {
+          if (gameState === 'PLAYING' && player.jumpCount < player.maxJumps) {
+            player.vy = player.jumpPower;
+            player.jumpCount++;
+          } else if (gameState !== 'PLAYING') {
+            startGame();
+          }
+        }
+        keys[e.code] = true;
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (keys.hasOwnProperty(e.code)) keys[e.code] = false;
+    });
+
+    function startGame() {
+      player.x = 30; player.y = 190;
+      player.vx = 0; player.vy = 0;
+      player.jumpCount = 0;
+      cameraX = 0;
+      gameTime = 0;
+      initObstacles();
+      gameState = 'PLAYING';
+
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (gameState === 'PLAYING') gameTime += 0.1;
+      }, 100);
+    }
+
+    // 최고 기록 세션 저장
+    function saveRecord(time) {
+      let records = JSON.parse(localStorage.getItem('trap_extreme_ranks') || '[]');
+      records.push(parseFloat(time.toFixed(1)));
+      records.sort((a, b) => a - b);
+      records = records.slice(0, 3);
+      localStorage.setItem('trap_extreme_ranks', JSON.stringify(records));
+      updateRankBoard();
+    }
+
+    function updateRankBoard() {
+      const records = JSON.parse(localStorage.getItem('trap_extreme_ranks') || '[]');
+      const rankListEl = document.getElementById('rankList');
+      if (records.length === 0) {
+        rankListEl.innerHTML = '<li>기록 없음</li>';
+      } else {
+        rankListEl.innerHTML = records.map((r, i) => `<li><b>${i+1}위:</b> ${r}초</li>`).join('');
+      }
+    }
+
+    // 물리 및 판정 업데이트
+    function update() {
+      if (gameState !== 'PLAYING') return;
+
+      if (keys.ArrowLeft) player.vx = -player.speed;
+      else if (keys.ArrowRight) player.vx = player.speed;
+      else player.vx = 0;
+
+      player.vy += player.gravity;
+      player.x += player.vx;
+      player.y += player.vy;
+
+      if (player.x < 0) player.x = 0;
+
+      // 발판 판정
+      player.grounded = false;
+      platforms.forEach(p => {
+        if (
+          player.x + player.width > p.x &&
+          player.x < p.x + p.w &&
+          player.y + player.height >= p.y &&
+          player.y + player.height <= p.y + 15 &&
+          player.vy >= 0
+        ) {
+          player.y = p.y - player.height;
+          player.vy = 0;
+          player.jumpCount = 0;
+          player.grounded = true;
+        }
+      });
+
+      // 추락 시 즉시 실패
+      if (player.y > canvas.height + 40) {
+        triggerGameOver();
+      }
+
+      // 카메라 추적
+      cameraX = player.x - 180;
+      if (cameraX < 0) cameraX = 0;
+      if (cameraX > mapWidth - canvas.width) cameraX = mapWidth - canvas.width;
+
+      // 장애물 행동 및 충돌
+      obstacles.forEach(obs => {
+        // 1. 갑툭튀 가시
+        if (obs.type === 'popup_spike') {
+          if (Math.abs(player.x - obs.x) < 90) obs.triggered = true;
+          if (obs.triggered && obs.y > 195) obs.y -= 5;
+        }
+
+        // 2. 가짜 꺼지는 발판
+        if (obs.type === 'fake_floor') {
+          if (
+            player.x + player.width > obs.x && player.x < obs.x + obs.w &&
+            Math.abs((player.y + player.height) - obs.y) < 5
+          ) {
+            obs.broken = true;
+          }
+        }
+
+        // 3. 낙석
+        if (obs.type === 'falling_rock') {
+          if (Math.abs(player.x - obs.x) < 140) obs.triggered = true;
+          if (obs.triggered) {
+            obs.vy += 0.6;
+            obs.y += obs.vy;
+          }
+        }
+
+        // 4. 순찰 가시
+        if (obs.type === 'patrol') {
+          obs.x += obs.dir * 2.5;
+          if (obs.x < obs.minX || obs.x > obs.maxX) obs.dir *= -1;
+        }
+
+        // 5. 유도 탄막
+        if (obs.type === 'homing') {
+          if (Math.abs(player.x - obs.x) < 280) obs.triggered = true;
+          if (obs.triggered) {
+            obs.x -= 6.5; // 매우 빠른 속도로 돌진
+          }
+        }
+
+        // 충돌 체크 (단 1번이라도 맞으면 사망)
+        if (obs.type !== 'fake_floor' || !obs.broken) {
+          if (
+            player.x < obs.x + obs.w &&
+            player.x + player.width > obs.x &&
+            player.y < obs.y + obs.h &&
+            player.y + player.height > obs.y
+          ) {
+            triggerGameOver();
+          }
+        }
+      });
+
+      // 최종 클리어 체크
+      if (
+        player.x < finishLine.x + finishLine.width &&
+        player.x + player.width > finishLine.x &&
+        player.y < finishLine.y + finishLine.height &&
+        player.y + player.height > finishLine.y
+      ) {
+        gameState = 'CLEAR';
+        clearInterval(timerInterval);
+        saveRecord(gameTime);
+      }
+    }
+
+    function triggerGameOver() {
+      gameState = 'GAMEOVER';
+      clearInterval(timerInterval);
+    }
+
+    // 렌더링
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.translate(-cameraX, 0);
+
+      // 발판 (다크 블루)
+      ctx.fillStyle = '#1e293b';
+      platforms.forEach(p => {
+        ctx.fillRect(p.x, p.y, p.w, 80);
+      });
+
+      // 함정 장애물
+      obstacles.forEach(obs => {
+        if (obs.type === 'fake_floor') {
+          if (!obs.broken) {
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+          }
+        } else {
+          ctx.fillStyle = '#ef4444'; // 위험 함정 (레드)
+          ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+        }
+      });
+
+      // 결승점 (초장거리 4000px 끝단)
+      ctx.fillStyle = '#10b981';
+      ctx.fillRect(finishLine.x, finishLine.y, finishLine.width, finishLine.height);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.fillText('FINISH', finishLine.x + 1, finishLine.y + 60);
+
+      // 플레이어 (네온 옐로우)
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+
+      ctx.restore();
+
+      // UI
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillText(`⏱️ 시간: ${gameTime.toFixed(1)}초`, 20, 28);
+      
+      const progress = Math.min(100, Math.floor((player.x / finishLine.x) * 100));
+      ctx.fillText(`🚩 진행도: ${progress}% (4000px 중 ${Math.floor(player.x)}px)`, 20, 50);
+
+      // 상태 창
+      if (gameState !== 'PLAYING') {
+        ctx.fillStyle = 'rgba(9, 13, 22, 0.88)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.textAlign = 'center';
+        if (gameState === 'START') {
+          ctx.fillStyle = '#ef4444';
+          ctx.font = 'bold 28px sans-serif';
+          ctx.fillText('TRAP DASH : EXTREME', canvas.width / 2, 110);
+          ctx.fillStyle = '#cbd5e1';
+          ctx.font = '14px sans-serif';
+          ctx.fillText('총 길이 4000px의 장거리 맵과 30개 이상의 기상천외한 트랩을 돌파하세요.', canvas.width / 2, 150);
+          ctx.fillStyle = '#f59e0b';
+          ctx.fillText('[Space] 키를 눌러 지옥의 미션 시작', canvas.width / 2, 205);
+        } else if (gameState === 'GAMEOVER') {
+          ctx.fillStyle = '#ef4444';
+          ctx.font = 'bold 30px sans-serif';
+          ctx.fillText('☠️ YOU DIED', canvas.width / 2, 115);
+          ctx.fillStyle = '#cbd5e1';
+          ctx.font = '15px sans-serif';
+          ctx.fillText(`진행도 ${progress}% 지점에서 의문사하였습니다. (처음부터 다시)`, canvas.width / 2, 160);
+          ctx.fillStyle = '#38bdf8';
+          ctx.fillText('[Space] 키를 눌러 다시 도전', canvas.width / 2, 210);
+        } else if (gameState === 'CLEAR') {
+          ctx.fillStyle = '#10b981';
+          ctx.font = 'bold 30px sans-serif';
+          ctx.fillText('🏆 EXTREME CLEAR!!', canvas.width / 2, 110);
+          ctx.fillStyle = '#f8fafc';
+          ctx.font = '18px sans-serif';
+          ctx.fillText(`전설적인 탈출 기록: ${gameTime.toFixed(1)}초`, canvas.width / 2, 155);
+          ctx.fillStyle = '#f59e0b';
+          ctx.font = '14px sans-serif';
+          ctx.fillText('명예의 전당에 기록이 보존됩니다! [Space] 재도전', canvas.width / 2, 205);
+        }
+        ctx.textAlign = 'left';
+      }
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    updateRankBoard();
+    loop();
+  </script>
+</body>
+</html>
