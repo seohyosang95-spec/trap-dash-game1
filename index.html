@@ -6,7 +6,6 @@ HTML
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>트랩 대시: 익스트림 (Trap Dash EXTREME)</title>
   <style>
-    /* 두 해상도(1920x1080, 1366x768)에서 가로 넘침 및 스크롤 방지 */
     html, body {
       margin: 0;
       padding: 0;
@@ -39,10 +38,9 @@ HTML
       text-align: center;
     }
 
-    /* 옵션 및 안내 컨트롤 바 */
     .controls-bar {
       display: flex;
-      gap: 15px;
+      gap: 12px;
       align-items: center;
       margin-bottom: 8px;
       background: #1e293b;
@@ -56,9 +54,19 @@ HTML
     .controls-bar label {
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 4px;
       cursor: pointer;
       user-select: none;
+    }
+
+    .controls-bar select {
+      background: #0f172a;
+      color: #f8fafc;
+      border: 1px solid #475569;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 11px;
+      cursor: pointer;
     }
 
     .controls-bar input[type="checkbox"] {
@@ -66,7 +74,6 @@ HTML
       accent-color: #ef4444;
     }
 
-    /* 캔버스 해상도 대응 반응형 스타일 */
     canvas {
       background: #111827;
       border: 2px solid #ef4444;
@@ -75,6 +82,7 @@ HTML
       max-width: 100%;
       height: auto;
       display: block;
+      cursor: pointer;
     }
 
     .rank-board {
@@ -127,15 +135,18 @@ HTML
   <div class="game-container">
     <h1>☠️ TRAP DASH : EXTREME</h1>
     
-    <!-- 움직임 감소 및 효과 설정 (체크리스트 요건 반영) -->
     <div class="controls-bar">
-      <span>🎮 [←][→] 이동 | [Space] 2단 점프</span>
+      <span>🎮 [←][→] 이동 | [Space] 점프 | [P] 일시정지</span>
       <label>
-        <input type="checkbox" id="reduceMotionToggle"> ⚡ 움직임/효과 감소
+        👤 캐릭터:
+        <select id="charSelect">
+          <option value="runner">🟡 런너 (밸런스)</option>
+          <option value="dash">🔵 대시 (고속)</option>
+          <option value="hopper">🟢 호퍼 (고점프)</option>
+        </select>
       </label>
-      <label>
-        <input type="checkbox" id="muteToggle"> 🔇 오디오 음소거
-      </label>
+      <label><input type="checkbox" id="reduceMotionToggle"> ⚡ 효과 감소</label>
+      <label><input type="checkbox" id="muteToggle"> 🔇 음소거</label>
     </div>
 
     <canvas id="gameCanvas" width="660" height="320"></canvas>
@@ -155,20 +166,41 @@ HTML
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    // 키 조작 상태 (중복 입력 방지)
     const keys = { ArrowLeft: false, ArrowRight: false, Space: false };
     let spacePressedHandled = false;
 
-    // 움직임 감소 및 음소거 설정
     const reduceMotionToggle = document.getElementById('reduceMotionToggle');
     const muteToggle = document.getElementById('muteToggle');
+    const charSelect = document.getElementById('charSelect');
     let reduceMotion = false;
     let isMuted = false;
 
     reduceMotionToggle.addEventListener('change', (e) => { reduceMotion = e.target.checked; });
     muteToggle.addEventListener('change', (e) => { isMuted = e.target.checked; });
+    charSelect.addEventListener('change', (e) => { applyCharacterStats(e.target.value); });
 
-    // Web Audio API를 활용한 시각/음향 효과 (사건 발생 시에만 동작)
+    // 캐릭터 속성 테이블
+    const CHARACTERS = {
+      runner: { name: '런너', color: '#facc15', speed: 3.8, jumpPower: -8.2 },
+      dash:   { name: '대시', color: '#38bdf8', speed: 4.6, jumpPower: -7.8 },
+      hopper: { name: '호퍼', color: '#4ade80', speed: 3.4, jumpPower: -9.0 }
+    };
+
+    const player = {
+      x: 30, y: 190, width: 18, height: 18,
+      vx: 0, vy: 0, speed: 3.8,
+      gravity: 0.48, jumpPower: -8.2,
+      jumpCount: 0, maxJumps: 2,
+      grounded: false, color: '#facc15'
+    };
+
+    function applyCharacterStats(type) {
+      const stats = CHARACTERS[type] || CHARACTERS.runner;
+      player.speed = stats.speed;
+      player.jumpPower = stats.jumpPower;
+      player.color = stats.color;
+    }
+
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     let audioCtx = null;
 
@@ -207,24 +239,13 @@ HTML
           osc.start();
           osc.stop(audioCtx.currentTime + 0.4);
         }
-      } catch (e) {
-        // 백그라운드 환경이나 오디오 미지원 시 에러 없이 통과
-      }
+      } catch (e) {}
     }
-
-    // 플레이어 객체 (난이도 조정 값 적용: jumpPower = -8.2)
-    const player = {
-      x: 30, y: 190, width: 18, height: 18,
-      vx: 0, vy: 0, speed: 3.8,
-      gravity: 0.48, jumpPower: -8.2, // [실험 보완] 변경된 난이도 최종값 하나 적용
-      jumpCount: 0, maxJumps: 2,
-      grounded: false
-    };
 
     const mapWidth = 4000;
     let cameraX = 0;
     let gameTime = 0;
-    let gameState = 'START'; // START, PLAYING, GAMEOVER, CLEAR
+    let gameState = 'START'; // START, PLAYING, PAUSED, GAMEOVER, CLEAR
     let lastTime = performance.now();
 
     const finishLine = { x: 3900, y: 130, width: 35, height: 110 };
@@ -285,16 +306,39 @@ HTML
       ];
     }
 
-    // 키보드 이벤트 (연속 입력 중복 판정 방지)
+    function togglePause() {
+      if (gameState === 'PLAYING') {
+        gameState = 'PAUSED';
+      } else if (gameState === 'PAUSED') {
+        gameState = 'PLAYING';
+        lastTime = performance.now();
+      }
+    }
+
+    canvas.addEventListener('click', () => {
+      if (gameState === 'PAUSED') {
+        togglePause();
+      } else if (gameState !== 'PLAYING') {
+        startGame();
+      }
+    });
+
     window.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyP') {
+        togglePause();
+        return;
+      }
+
       if (['Space', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
         if (e.code === 'Space' && !spacePressedHandled) {
           spacePressedHandled = true;
-          if (gameState === 'PLAYING' && player.jumpCount < player.maxJumps) {
+          if (gameState === 'PAUSED') {
+            togglePause();
+          } else if (gameState === 'PLAYING' && player.jumpCount < player.maxJumps) {
             player.vy = player.jumpPower;
             player.jumpCount++;
             playSound('jump');
-            createParticles(player.x + 9, player.y + 18, '#facc15', 5);
+            createParticles(player.x + 9, player.y + 18, player.color, 5);
           } else if (gameState !== 'PLAYING') {
             startGame();
           }
@@ -308,8 +352,8 @@ HTML
       if (keys.hasOwnProperty(e.code)) keys[e.code] = false;
     });
 
-    // 새 게임 시작 (현재 판 실시간 상태 완벽 초기화)
     function startGame() {
+      applyCharacterStats(charSelect.value);
       player.x = 30; player.y = 190;
       player.vx = 0; player.vy = 0;
       player.jumpCount = 0;
@@ -321,7 +365,6 @@ HTML
       lastTime = performance.now();
     }
 
-    // 예외 처리 적용된 LocalStorage 보존 기록 관리 (손상/빈값 완벽 대처)
     function saveRecord(time) {
       let records = getSafeRecords();
       records.push(parseFloat(time.toFixed(1)));
@@ -329,9 +372,7 @@ HTML
       records = records.slice(0, 3);
       try {
         localStorage.setItem('trap_extreme_ranks', JSON.stringify(records));
-      } catch (e) {
-        // Storage 접근 제한 시에도 계속 진행
-      }
+      } catch (e) {}
       updateRankBoard();
     }
 
@@ -342,7 +383,6 @@ HTML
         const parsed = JSON.parse(raw);
         return Array.isArray(parsed) ? parsed.filter(n => typeof n === 'number') : [];
       } catch (e) {
-        console.warn("저장소 데이터 손상 감지: 안전하게 초기화되었습니다.");
         return [];
       }
     }
@@ -364,9 +404,8 @@ HTML
       updateRankBoard();
     }
 
-    // 파티클 생성 (사건 발생 시 연출)
     function createParticles(x, y, color, count) {
-      if (reduceMotion) return; // 움직임 감소 옵션 시 파티클 생략
+      if (reduceMotion) return;
       for (let i = 0; i < count; i++) {
         particles.push({
           x, y,
@@ -378,11 +417,9 @@ HTML
       }
     }
 
-    // 게임 물리 및 상태 업데이트 (delta time 기반으로 포커스 이탈 복귀 시 건너뜀 방지)
     function update(dt) {
       if (gameState !== 'PLAYING') return;
 
-      // 10분 이상 누적 시간이 너무 크게 튀는 것 방지 (포커스 이탈 대처)
       const effectiveDt = Math.min(dt, 0.1);
       gameTime += effectiveDt;
 
@@ -396,7 +433,6 @@ HTML
 
       if (player.x < 0) player.x = 0;
 
-      // 발판 충돌 판정
       player.grounded = false;
       platforms.forEach(p => {
         if (
@@ -413,17 +449,14 @@ HTML
         }
       });
 
-      // 추락 사망
       if (player.y > canvas.height + 40) {
         triggerGameOver();
       }
 
-      // 카메라
       cameraX = player.x - 180;
       if (cameraX < 0) cameraX = 0;
       if (cameraX > mapWidth - canvas.width) cameraX = mapWidth - canvas.width;
 
-      // 장애물 판정
       obstacles.forEach(obs => {
         if (obs.type === 'popup_spike') {
           if (Math.abs(player.x - obs.x) < 90) obs.triggered = true;
@@ -459,7 +492,6 @@ HTML
           }
         }
 
-        // 충돌 처리 (단 1번 충돌 시 즉시 사망)
         if (obs.type !== 'fake_floor' || !obs.broken) {
           if (
             player.x < obs.x + obs.w &&
@@ -472,7 +504,6 @@ HTML
         }
       });
 
-      // 클리어 판정
       if (
         player.x < finishLine.x + finishLine.width &&
         player.x + player.width > finishLine.x &&
@@ -485,7 +516,6 @@ HTML
         createParticles(player.x, player.y, '#10b981', 30);
       }
 
-      // 파티클 업데이트
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.x += p.vx;
@@ -502,18 +532,17 @@ HTML
       createParticles(player.x, player.y, '#ef4444', 20);
     }
 
-    // 렌더링 함수
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       ctx.save();
       ctx.translate(-cameraX, 0);
 
-      // 발판
-      ctx.fillStyle = '#1e293b';
-      platforms.forEach(p => { ctx.fillRect(p.x, p.y, p.w, 80); });
+      platforms.forEach(p => {
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(p.x, p.y, p.w, 80);
+      });
 
-      // 장애물
       obstacles.forEach(obs => {
         if (obs.type === 'fake_floor') {
           if (!obs.broken) {
@@ -526,7 +555,6 @@ HTML
         }
       });
 
-      // 결승점
       ctx.fillStyle = '#10b981';
       ctx.fillRect(finishLine.x, finishLine.y, finishLine.width, finishLine.height);
       ctx.fillStyle = '#fff';
@@ -534,10 +562,9 @@ HTML
       ctx.fillText('FINISH', finishLine.x + 1, finishLine.y + 60);
 
       // 플레이어
-      ctx.fillStyle = '#facc15';
+      ctx.fillStyle = player.color;
       ctx.fillRect(player.x, player.y, player.width, player.height);
 
-      // 파티클
       particles.forEach(p => {
         ctx.fillStyle = p.color;
         ctx.globalAlpha = p.life;
@@ -547,7 +574,6 @@ HTML
 
       ctx.restore();
 
-      // HUD UI
       ctx.fillStyle = '#f8fafc';
       ctx.font = 'bold 14px sans-serif';
       ctx.fillText(`⏱️ 시간: ${gameTime.toFixed(1)}초`, 15, 25);
@@ -555,7 +581,6 @@ HTML
       const progress = Math.min(100, Math.floor((player.x / finishLine.x) * 100));
       ctx.fillText(`🚩 진행도: ${progress}% (${Math.floor(player.x)} / 4000px)`, 15, 45);
 
-      // 상태별 화면 오버레이
       if (gameState !== 'PLAYING') {
         ctx.fillStyle = 'rgba(9, 13, 22, 0.88)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -567,9 +592,18 @@ HTML
           ctx.fillText('TRAP DASH : EXTREME', canvas.width / 2, 110);
           ctx.fillStyle = '#cbd5e1';
           ctx.font = '13px sans-serif';
-          ctx.fillText('30초 내 순간 판단 필요! 4000px 장거리 지옥 트랩을 돌파하세요.', canvas.width / 2, 150);
+          ctx.fillText('캐릭터를 선택하고 4000px 지옥 트랩을 돌파하세요!', canvas.width / 2, 150);
           ctx.fillStyle = '#f59e0b';
-          ctx.fillText('[Space] 키를 눌러 게임 시작', canvas.width / 2, 200);
+          ctx.fillText('[Space] 키 또는 화면을 클릭하여 게임 시작', canvas.width / 2, 200);
+        } else if (gameState === 'PAUSED') {
+          ctx.fillStyle = '#38bdf8';
+          ctx.font = 'bold 30px sans-serif';
+          ctx.fillText('⏸️ PAUSED (일시정지)', canvas.width / 2, 120);
+          ctx.fillStyle = '#cbd5e1';
+          ctx.font = '14px sans-serif';
+          ctx.fillText('게임을 잠시 멈췄습니다.', canvas.width / 2, 160);
+          ctx.fillStyle = '#f59e0b';
+          ctx.fillText('[P] 키, [Space] 키 또는 화면을 클릭하여 다시재생', canvas.width / 2, 205);
         } else if (gameState === 'GAMEOVER') {
           ctx.fillStyle = '#ef4444';
           ctx.font = 'bold 28px sans-serif';
@@ -578,7 +612,7 @@ HTML
           ctx.font = '14px sans-serif';
           ctx.fillText(`진행도 ${progress}% 지점에서 사망하였습니다.`, canvas.width / 2, 155);
           ctx.fillStyle = '#38bdf8';
-          ctx.fillText('[Space] 키를 눌러 재도전 (초기화 후 새 판 시작)', canvas.width / 2, 200);
+          ctx.fillText('[Space] 키를 눌러 재도전', canvas.width / 2, 200);
         } else if (gameState === 'CLEAR') {
           ctx.fillStyle = '#10b981';
           ctx.font = 'bold 28px sans-serif';
@@ -593,7 +627,6 @@ HTML
       }
     }
 
-    // 메인 루프 (10분 이상 연속 실행 안정성 보장)
     function gameLoop(timestamp) {
       const dt = (timestamp - lastTime) / 1000;
       lastTime = timestamp;
@@ -604,7 +637,7 @@ HTML
       requestAnimationFrame(gameLoop);
     }
 
-    // 초기화 및 시작
+    applyCharacterStats('runner');
     updateRankBoard();
     requestAnimationFrame(gameLoop);
   </script>
