@@ -30,6 +30,7 @@ HTML
     canvas {
       background: #111827; border: 2px solid #ef4444; border-radius: 8px;
       width: 100%; max-width: 660px; height: auto; aspect-ratio: 660 / 320;
+      cursor: pointer;
     }
     .rank-board {
       margin-top: 8px; background: #1f2937; padding: 8px 12px; border-radius: 8px;
@@ -44,10 +45,10 @@ HTML
 <body>
 
   <div class="game-container">
-    <h1>☠️ TRAP DASH : EXTREME</h1>
+    <h1>☠️ TRAP DASH : EXTREME (HARDCORE)</h1>
     
     <div class="controls-bar">
-      <span>🎮 [←][→] 이동 | [Space] 점프 | [P] 일시정지</span>
+      <span>🎮 [←][→] 이동 | [Space] 점프 | [P] 일시정지 | [R] 처음부터</span>
       <label>👤 캐릭터:
         <select id="charSelect">
           <option value="runner">🟡 런너 (밸런스)</option>
@@ -152,23 +153,45 @@ HTML
     const finishLine = { x: 3900, y: 130, width: 35, height: 110 };
 
     const platforms = [
-      { x: 0, y: 240, w: 400 }, { x: 470, y: 240, w: 300 }, { x: 830, y: 200, w: 250 },
-      { x: 1150, y: 240, w: 400 }, { x: 1620, y: 210, w: 200 }, { x: 1890, y: 240, w: 350 },
-      { x: 2300, y: 180, w: 200 }, { x: 2570, y: 240, w: 400 }, { x: 3040, y: 200, w: 250 },
-      { x: 3350, y: 240, w: 600 }
+      { x: 0, y: 240, w: 350 }, { x: 420, y: 240, w: 220 }, { x: 720, y: 200, w: 180 },
+      { x: 1000, y: 240, w: 300 }, { x: 1400, y: 210, w: 180 }, { x: 1680, y: 240, w: 250 },
+      { x: 2030, y: 180, w: 160 }, { x: 2290, y: 240, w: 300 }, { x: 2700, y: 200, w: 200 },
+      { x: 3000, y: 240, w: 200 }, { x: 3300, y: 220, w: 200 }, { x: 3600, y: 240, w: 350 }
     ];
 
     let obstacles = [], particles = [];
 
+    // 🔥 난이도 최상: 촘촘하고 빽빽해진 장애물 패턴
     function initObstacles() {
       obstacles = [
-        { x: 150, y: 220, w: 18, h: 20, type: 'spike' },
-        { x: 280, y: 240, w: 20, h: 20, type: 'popup_spike', triggered: false },
-        { x: 360, y: 240, w: 40, h: 10, type: 'fake_floor', broken: false },
-        { x: 500, y: -50, w: 30, h: 30, type: 'falling_rock', triggered: false, vy: 0 },
-        { x: 620, y: 220, w: 18, h: 20, type: 'patrol', minX: 580, maxX: 700, dir: 1 },
-        { x: 1080, y: 240, w: 70, h: 10, type: 'fake_floor', broken: false },
-        { x: 2050, y: 200, w: 20, h: 15, type: 'homing', triggered: false }
+        { x: 120, y: 220, w: 18, h: 20, type: 'spike' },
+        { x: 200, y: 240, w: 20, h: 20, type: 'popup_spike', triggered: false },
+        { x: 260, y: 240, w: 40, h: 10, type: 'fake_floor', broken: false },
+        { x: 450, y: -50, w: 35, h: 35, type: 'falling_rock', triggered: false, vy: 0 },
+        { x: 530, y: 220, w: 18, h: 20, type: 'patrol', minX: 480, maxX: 610, dir: 1 },
+        { x: 750, y: 180, w: 18, h: 20, type: 'spike' },
+        { x: 820, y: 180, w: 20, h: 20, type: 'popup_spike', triggered: false },
+        { x: 1050, y: -50, w: 30, h: 30, type: 'falling_rock', triggered: false, vy: 0 },
+        { x: 1120, y: 240, w: 50, h: 10, type: 'fake_floor', broken: false },
+        { x: 1210, y: 220, w: 18, h: 20, type: 'spike' },
+        { x: 1440, y: 190, w: 20, h: 15, type: 'homing', triggered: false },
+        { x: 1510, y: 190, w: 18, h: 20, type: 'patrol', minX: 1420, maxX: 1560, dir: -1 },
+        { x: 1720, y: 240, w: 60, h: 10, type: 'fake_floor', broken: false },
+        { x: 1820, y: -50, w: 40, h: 40, type: 'falling_rock', triggered: false, vy: 0 },
+        { x: 2060, y: 160, w: 18, h: 20, type: 'spike' },
+        { x: 2120, y: 160, w: 20, h: 15, type: 'homing', triggered: false },
+        { x: 2330, y: 240, w: 20, h: 20, type: 'popup_spike', triggered: false },
+        { x: 2420, y: 220, w: 18, h: 20, type: 'patrol', minX: 2350, maxX: 2550, dir: 1 },
+        { x: 2510, y: -50, w: 35, h: 35, type: 'falling_rock', triggered: false, vy: 0 },
+        { x: 2740, y: 180, w: 18, h: 20, type: 'spike' },
+        { x: 2820, y: 180, w: 20, h: 15, type: 'homing', triggered: false },
+        { x: 3040, y: 240, w: 40, h: 10, type: 'fake_floor', broken: false },
+        { x: 3120, y: 220, w: 20, h: 20, type: 'popup_spike', triggered: false },
+        { x: 3340, y: 200, w: 18, h: 20, type: 'spike' },
+        { x: 3420, y: -50, w: 45, h: 45, type: 'falling_rock', triggered: false, vy: 0 },
+        { x: 3640, y: 220, w: 20, h: 15, type: 'homing', triggered: false },
+        { x: 3720, y: 240, w: 20, h: 20, type: 'popup_spike', triggered: false },
+        { x: 3800, y: 220, w: 18, h: 20, type: 'spike' }
       ];
     }
 
@@ -179,13 +202,25 @@ HTML
 
     window.addEventListener('blur', () => { if (gameState === 'PLAYING') gameState = 'PAUSED'; });
 
-    canvas.addEventListener('click', () => {
-      if (gameState === 'PAUSED') togglePause();
-      else if (gameState !== 'PLAYING') startGame();
+    canvas.addEventListener('click', (e) => {
+      if (gameState === 'PAUSED') {
+        const rect = canvas.getBoundingClientRect();
+        const clickY = (e.clientY - rect.top) * (canvas.height / rect.height);
+        // 일시정지 중 하단 재시작 버튼 영역 클릭 시
+        if (clickY > 210 && clickY < 250) {
+          startGame();
+          return;
+        }
+        togglePause();
+      } else if (gameState !== 'PLAYING') {
+        startGame();
+      }
     });
 
     window.addEventListener('keydown', (e) => {
       if (e.code === 'KeyP') { togglePause(); return; }
+      if (e.code === 'KeyR' && gameState === 'PAUSED') { startGame(); return; }
+
       if (['Space', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
         if (e.code === 'Space' && !spaceHandled) {
           spaceHandled = true;
@@ -291,15 +326,15 @@ HTML
         }
         if (obs.type === 'falling_rock') {
           if (Math.abs(player.x - obs.x) < 140) obs.triggered = true;
-          if (obs.triggered) { obs.vy += 0.6; obs.y += obs.vy; }
+          if (obs.triggered) { obs.vy += 0.7; obs.y += obs.vy; }
         }
         if (obs.type === 'patrol') {
-          obs.x += obs.dir * 2.5;
+          obs.x += obs.dir * 3.0;
           if (obs.x < obs.minX || obs.x > obs.maxX) obs.dir *= -1;
         }
         if (obs.type === 'homing') {
           if (Math.abs(player.x - obs.x) < 280) obs.triggered = true;
-          if (obs.triggered) obs.x -= 6.5;
+          if (obs.triggered) obs.x -= 7.5;
         }
         if (obs.type !== 'fake_floor' || !obs.broken) {
           if (player.x < obs.x + obs.w && player.x + player.width > obs.x && player.y < obs.y + obs.h && player.y + player.height > obs.y) triggerGameOver();
@@ -361,18 +396,24 @@ HTML
       ctx.fillStyle = '#f8fafc'; ctx.font = 'bold 13px sans-serif';
       ctx.fillText(`⏱️ 시간: ${gameTime.toFixed(1)}초`, 15, 25);
       const progress = Math.min(100, Math.floor((player.x / finishLine.x) * 100));
-      ctx.fillText(`🚩 진행도: ${progress}%`, 15, 45);
+      ctx.fillText(`🚩 진행도: ${progress}% (난이도: 최상)`, 15, 45);
 
       if (gameState !== 'PLAYING') {
         ctx.fillStyle = 'rgba(9, 13, 22, 0.88)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.textAlign = 'center';
         if (gameState === 'START') {
-          ctx.fillStyle = '#ef4444'; ctx.font = 'bold 24px sans-serif'; ctx.fillText('TRAP DASH : EXTREME', canvas.width / 2, 110);
-          ctx.fillStyle = '#cbd5e1'; ctx.font = '13px sans-serif'; ctx.fillText('캐릭터를 선택하고 트랩을 돌파하세요!', canvas.width / 2, 150);
+          ctx.fillStyle = '#ef4444'; ctx.font = 'bold 24px sans-serif'; ctx.fillText('TRAP DASH : EXTREME (HARDCORE)', canvas.width / 2, 110);
+          ctx.fillStyle = '#cbd5e1'; ctx.font = '13px sans-serif'; ctx.fillText('극악의 트랩을 돌파하세요!', canvas.width / 2, 150);
           ctx.fillStyle = '#f59e0b'; ctx.fillText('[Space] 키 또는 클릭하여 시작', canvas.width / 2, 200);
         } else if (gameState === 'PAUSED') {
-          ctx.fillStyle = '#38bdf8'; ctx.font = 'bold 26px sans-serif'; ctx.fillText('⏸️ PAUSED', canvas.width / 2, 120);
-          ctx.fillStyle = '#f59e0b'; ctx.font = '14px sans-serif'; ctx.fillText('[P] 또는 [Space] 키를 눌러 재개', canvas.width / 2, 180);
+          ctx.fillStyle = '#38bdf8'; ctx.font = 'bold 26px sans-serif'; ctx.fillText('⏸️ PAUSED (일시정지)', canvas.width / 2, 100);
+          ctx.fillStyle = '#cbd5e1'; ctx.font = '14px sans-serif'; ctx.fillText('[P] 키 또는 화면 클릭: 계속 진행', canvas.width / 2, 150);
+          
+          // 처음부터 다시하기 UI 추가
+          ctx.fillStyle = '#ef4444';
+          ctx.fillRect(canvas.width / 2 - 110, 185, 220, 36);
+          ctx.fillStyle = '#ffffff'; ctx.font = 'bold 14px sans-serif';
+          ctx.fillText('🔄 [R] 키: 처음부터 다시 시작', canvas.width / 2, 208);
         } else if (gameState === 'GAMEOVER') {
           ctx.fillStyle = '#ef4444'; ctx.font = 'bold 26px sans-serif'; ctx.fillText('☠️ YOU DIED', canvas.width / 2, 110);
           ctx.fillStyle = '#cbd5e1'; ctx.font = '14px sans-serif'; ctx.fillText(`진행도 ${progress}% 지점 사망`, canvas.width / 2, 155);
